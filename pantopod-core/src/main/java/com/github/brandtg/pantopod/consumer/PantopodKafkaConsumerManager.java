@@ -44,14 +44,17 @@ public class PantopodKafkaConsumerManager implements Managed {
     this.consumers = new HashMap<>();
   }
 
-  public void start(String kafkaTopic) throws Exception {
+  public void start(String kafkaTopic, String uriChroot, String startPage) throws Exception {
     synchronized (consumers) {
-      PantopodKafkaConsumer consumer = new PantopodKafkaConsumer(zkConnectionString,
+      PantopodKafkaConsumer consumer = new PantopodKafkaConsumer(
+          zkConnectionString,
           kafkaBrokerList,
           kafkaGroupId,
           kafkaTopic,
           executorService,
-          eventHandler);
+          eventHandler,
+          uriChroot,
+          startPage);
       List<PantopodKafkaConsumer> consumerList = consumers.get(kafkaTopic);
       if (consumerList == null) {
         consumerList = new ArrayList<>();

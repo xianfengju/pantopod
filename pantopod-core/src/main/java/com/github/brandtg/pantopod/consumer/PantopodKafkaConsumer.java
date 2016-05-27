@@ -30,6 +30,7 @@ import kafka.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -43,6 +44,8 @@ public class PantopodKafkaConsumer implements Managed {
   private final String kafkaBrokerList;
   private final ExecutorService executorService;
   private final PantopodEventHandler eventHandler;
+  private final String uriChroot;
+  private final String startPage;
   private final AtomicBoolean isRunning;
 
   private Producer<byte[], byte[]> producer;
@@ -53,10 +56,14 @@ public class PantopodKafkaConsumer implements Managed {
                                String kafkaGroupId,
                                String kafkaTopic,
                                ExecutorService executorService,
-                               PantopodEventHandler eventHandler) {
+                               PantopodEventHandler eventHandler,
+                               String uriChroot,
+                               String startPage) {
     this.zkConnectionString = zkConnectionString;
     this.kafkaGroupId = kafkaGroupId;
     this.kafkaTopic = kafkaTopic;
+    this.uriChroot = uriChroot;
+    this.startPage = startPage;
     this.kafkaBrokerList = kafkaBrokerList;
     this.executorService = executorService;
     this.eventHandler = eventHandler;
@@ -105,6 +112,10 @@ public class PantopodKafkaConsumer implements Managed {
               MessageAndMetadata<byte[], byte[]> messageAndMetadata = it.next();
               try {
                 CrawlEvent event = OBJECT_MAPPER.readValue(messageAndMetadata.message(), CrawlEvent.class);
+                if (event.getUrl() != null && !URI.create(event.getUrl()).getPath().startsWith(uriChroot)) {
+                  LOG.warn("Got event that does not match chroot={}: {}", uriChroot, event);
+                }
+
                 Set<CrawlEvent> nextEvents = eventHandler.handle(event);
                 if (nextEvents != null) {
                   for (CrawlEvent nextEvent : nextEvents) {
@@ -121,11 +132,16 @@ public class PantopodKafkaConsumer implements Managed {
       }
 
       // Produce the topic name as a URL (this kick-starts the process)
+      String url = "http://"
+          + kafkaTopic
+          + (uriChroot == null ? "" : uriChroot)
+          + (startPage == null ? "" : startPage);
       CrawlEvent firstEvent = new CrawlEvent();
-      firstEvent.setUrl("http://" + kafkaTopic);
+      firstEvent.setUrl(url);
+      firstEvent.setChroot(uriChroot);
       byte[] encodedFirstEvent = OBJECT_MAPPER.writeValueAsBytes(firstEvent);
       producer.send(new KeyedMessage<byte[], byte[]>(kafkaTopic, encodedFirstEvent));
-      LOG.info("Sent first event http://{}", kafkaTopic);
+      LOG.info("Sent first event {}", kafkaTopic);
     }
   }
 
@@ -137,22 +153,4 @@ public class PantopodKafkaConsumer implements Managed {
       producer.close();
     }
   }
-
-//  public static void main(String[] args) throws Exception {
-////    PantopodKafkaConsumer consumer = new PantopodKafkaConsumer("localhost:2181", "localhost:9092", "g2", "test2", Executors.newSingleThreadExecutor(), new PantopodEventHandler() {
-////      @Override
-////      public Set<CrawlEvent> handle(CrawlEvent event) throws Exception {
-////        System.out.println(event);
-////        return null;
-////      }
-////    });
-//    PantopodKafkaConsumer consumer = new PantopodKafkaConsumer("localhost:2181", "localhost:9092", "g2", "test7",
-//        Executors.newSingleThreadExecutor(),
-//        new FileBasedCrawlingEventHandler(new File("/tmp/test-data")));
-//
-//    consumer.start();
-//
-//    CountDownLatch latch = new CountDownLatch(1);
-//    latch.await();
-//  }
 }

@@ -23,6 +23,7 @@ public class CrawlEvent {
   private String url;
   private String parentUrl;
   private int depth;
+  private String chroot;
 
   public CrawlEvent() {}
 
@@ -30,6 +31,15 @@ public class CrawlEvent {
     this.url = other.getUrl();
     this.parentUrl = other.getParentUrl();
     this.depth = other.getDepth();
+    this.chroot = other.getChroot();
+  }
+
+  public String getChroot() {
+    return chroot;
+  }
+
+  public void setChroot(String chroot) {
+    this.chroot = chroot;
   }
 
   public String getUrl() {
@@ -62,6 +72,7 @@ public class CrawlEvent {
         .add("url", url)
         .add("parentUrl", parentUrl)
         .add("depth", depth)
+        .add("chroot", chroot)
         .toString();
   }
 
@@ -73,11 +84,12 @@ public class CrawlEvent {
     CrawlEvent e = (CrawlEvent) o;
     return Objects.equals(url, e.getUrl())
         && Objects.equals(parentUrl, e.getParentUrl())
-        && Objects.equals(depth, e.getDepth());
+        && Objects.equals(depth, e.getDepth())
+        && Objects.equals(chroot, e.getChroot());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(url, parentUrl, depth);
+    return Objects.hash(url, parentUrl, depth, chroot);
   }
 }

@@ -79,16 +79,28 @@ java -jar pantopod-core/target/pantopod-core-1.0-SNAPSHOT.jar participant \
   server /tmp/pantopod-config.yml
 ```
 
-At this point, we have a single node cluster ready to start accepting some work. To scrape a website, we simply add a Helix resource with the name of the authority (e.g. `www.cs.washington.edu`), and rebalance it, or assign partitions of that resource to different nodes.
+At this point, we have a single node cluster ready to start accepting some work. To scrape a website, we simply add a Helix resource with the name of the authority (e.g. `www.cs.washington.edu`), or assign partitions of that resource to different nodes.
 
 ```
 java -jar pantopod-core/target/pantopod-core-1.0-SNAPSHOT.jar admin \
   --zkSvr localhost:2181 \
-  --addResource PANTOPOD www.cs.washington.edu 4 OnlineOffline
-  
+  --addResource PANTOPOD courses.cs.washington.edu 4 OnlineOffline
+```
+
+If we don't want to scrape the whole website, we can provide a `chroot` and `startPage` to the root domain:
+
+```
 java -jar pantopod-core/target/pantopod-core-1.0-SNAPSHOT.jar admin \
   --zkSvr localhost:2181 \
-  --rebalance PANTOPOD www.cs.washington.edu 1
+  --setConfig RESOURCE PANTOPOD,courses.cs.washington.edu chroot=/courses/cse190m/10su,startPage=index.shtml
+```
+
+Now to start the job, rebalance the resource onto the cluster:
+
+```
+java -jar pantopod-core/target/pantopod-core-1.0-SNAPSHOT.jar admin \
+  --zkSvr localhost:2181 \
+  --rebalance PANTOPOD courses.cs.washington.edu 1
 ```
 
 This starts 4 workers on our 1 node. If we wanted 8 workers on 2 nodes, we could change the argument to `--rebalance` from 1 to 2.

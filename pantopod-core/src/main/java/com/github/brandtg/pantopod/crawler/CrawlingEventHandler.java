@@ -88,7 +88,7 @@ public abstract class CrawlingEventHandler implements PantopodEventHandler {
       for (Element element : dom.select("a")) {
         String href = element.attr("href");
         if (href != null) {
-          URI nextUri = getNextUri(url, href);
+          URI nextUri = getNextUri(url, href, event.getChroot());
           if (shouldExplore(nextUri)
               && isSameDomain(url, nextUri)
               && isDifferentPage(url, nextUri)) {
@@ -108,10 +108,11 @@ public abstract class CrawlingEventHandler implements PantopodEventHandler {
     return nextEvents;
   }
 
-  private URI getNextUri(URI url, String href) throws Exception {
-    if (href.contains("..")) {
-      throw new IllegalArgumentException("Relative URI not allowed: " + href);
-    }
+  private URI getNextUri(URI url, String href, String chroot) throws Exception {
+//    if (href.contains("..")) {
+//
+//      throw new IllegalArgumentException("Relative URI not allowed: " + href);
+//    }
 
     URI hrefUri = URI.create(href.trim().replaceAll(" ", "+"));
 
@@ -122,7 +123,23 @@ public abstract class CrawlingEventHandler implements PantopodEventHandler {
     builder.setPort(hrefUri.getPort() == -1 ? url.getPort() : hrefUri.getPort());
 
     if (hrefUri.getPath() != null) {
-      builder.setPath(hrefUri.getPath());
+      StringBuilder path = new StringBuilder();
+      if (hrefUri.getHost() == null && chroot != null) {
+        path.append(chroot);
+      }
+
+      // Ensure no two slashes
+      if (hrefUri.getPath() != null
+          && hrefUri.getPath().length() > 0
+          && hrefUri.getPath().charAt(0) == '/'
+          && path.length() > 0
+          && path.charAt(path.length() - 1) == '/') {
+        path.setLength(path.length() - 1);
+      }
+
+      path.append(hrefUri.getPath());
+
+      builder.setPath(chroot == null ? "" : chroot + hrefUri.getPath());
     }
     if (hrefUri.getQuery() != null) {
       builder.setCustomQuery(hrefUri.getQuery());
